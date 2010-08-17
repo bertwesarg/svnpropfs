@@ -4,9 +4,9 @@ from __future__ import with_statement
 
 import os
 from errno import *
+from stat import *
 from sys import argv, exit
-from subprocess import *
-
+import time
 import re
 
 from fuse import FUSE, Operations, LoggingMixIn, fuse_get_context
@@ -47,7 +47,10 @@ class SvnPropFS(LoggingMixIn, Operations):
         return os.fsync(fh)
 
     def getattr(self, path, fh=None):
-#        try:
+        dirpath = os.path.dirname(path)
+        name = os.path.basename(path)
+        m = self.propregex.match(name)
+        if m == None:
             st = os.lstat(path)
             return dict((key, getattr(st, key)) for key in ('st_atime',
                 'st_ctime',
@@ -57,20 +60,26 @@ class SvnPropFS(LoggingMixIn, Operations):
                 'st_nlink',
                 'st_size',
                 'st_uid'))
-#        except OSError, e:
-#            if hasattr(e, 'errno'): e = e.errno
-#            if e != ENOENT:
-#                raise OSError(e, '')
-#            else:
-#                dirpath = dirname(path)
-#                name = basename(path)
-#                if not self
-#                st = dict(st_mode=(S_IFREG | 0644),
-#                    st_nlink=1,
-#                    st_size=0,
-#                    st_ctime=time(),
-#                    st_mtime=time(),
-#                    st_atime=time())
+        else:
+            if len(m.group('name')) == 0:
+                srcname = dirpath
+            else:
+                srcname = os.path.join(dirpath, m.group('name'))
+            prop = dict()
+            try:
+                prop = self.client.propget(m.group('prop'), srcname, recurse=False)
+            except:
+                raise OSError(ENOENT, '')
+            print prop
+            if len(prop) == 0:
+                raise OSError(ENOENT, '')
+            return dict(
+                st_mode=(S_IFREG | 0644),
+                st_nlink=1,
+                st_size=len(prop[srcname]),
+                st_ctime=time.time(),
+                st_mtime=time.time(),
+                st_atime=time.time())
 
     getxattr = None
 
