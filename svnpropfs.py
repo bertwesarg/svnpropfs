@@ -2,12 +2,11 @@
 
 from __future__ import with_statement
 
+import os
 from errno import *
-from os.path import normpath, realpath, basename, dirname
 from sys import argv, exit
 from subprocess import *
 
-import os
 import re
 
 from fuse import FUSE, Operations, LoggingMixIn, fuse_get_context
@@ -16,7 +15,7 @@ import pysvn
 
 class SvnPropFS(LoggingMixIn, Operations):
     def __init__(self, root):
-        self.root = realpath(root)
+        self.root = os.path.realpath(root)
         self.client = pysvn.Client()
         try:
             info = self.client.info(self.root)
@@ -26,7 +25,7 @@ class SvnPropFS(LoggingMixIn, Operations):
         self.propregex = re.compile(r"^\.(?P<name>[^#]*)#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
 
     def __call__(self, op, path, *args):
-        return super(SvnPropFS, self).__call__(op, normpath(self.root + path), *args)
+        return super(SvnPropFS, self).__call__(op, os.path.normpath(self.root + path), *args)
     
     def access(self, path, mode):
         if not os.access(path, mode):
@@ -97,7 +96,7 @@ class SvnPropFS(LoggingMixIn, Operations):
 
         try:
             uid, gid, pid = fuse_get_context()
-            comm = basename(os.readlink('/proc/%d/exe' % pid))
+            comm = os.path.basename(os.readlink('/proc/%d/exe' % pid))
         except:
             comm = ''
 
@@ -110,7 +109,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             if  name == path:
                 name = ''
             else:
-                name = basename(name)
+                name = os.path.basename(name)
             for prop in prop_dict.keys():
                 out += ['.' + name + '#' + prop]
         return out
@@ -152,7 +151,7 @@ if __name__ == "__main__":
         exit(1)
 
     mountpoint = os.path.realpath(argv[1])
-    shadowmountpoint = os.path.join(os.path.dirname(mountpoint), '.svnpropfs.' + os.path.basename(mountpoint))
+    shadowmountpoint = os.path.join(os.path.dirname(mountpoint), '.' + os.path.basename(mountpoint)) + '.svnpropfs'
     try:
         os.rename(mountpoint, shadowmountpoint)
         os.mkdir(mountpoint, os.stat(shadowmountpoint).st_mode)
