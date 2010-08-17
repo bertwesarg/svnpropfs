@@ -15,7 +15,7 @@ from fuse import FUSE, Operations, LoggingMixIn, fuse_get_context
 
 import pysvn
 
-class Loopback(LoggingMixIn, Operations):
+class SvnPropFS(LoggingMixIn, Operations):
     def __init__(self, root):
         self.root = realpath(root)
         self.rwlock = Lock()
@@ -28,7 +28,7 @@ class Loopback(LoggingMixIn, Operations):
         self.propregex = re.compile(r"^\.(?P<name>[^#]*)#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
 
     def __call__(self, op, path, *args):
-        return super(Loopback, self).__call__(op, normpath(self.root + path), *args)
+        return super(SvnPropFS, self).__call__(op, normpath(self.root + path), *args)
     
     def access(self, path, mode):
         if not os.access(path, mode):
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     try:
         os.rename(mountpoint, shadowmountpoint)
         os.mkdir(mountpoint, os.stat(shadowmountpoint).st_mode)
-        fuse = FUSE(Loopback(shadowmountpoint), mountpoint, foreground=True, nothreads=True, fsname=argv[1])
+        fuse = FUSE(SvnPropFS(shadowmountpoint), mountpoint, foreground=True, nothreads=True, fsname=argv[1])
     except BaseException, e:
         print repr(e)
     finally:
