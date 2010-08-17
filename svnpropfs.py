@@ -6,7 +6,6 @@ from errno import *
 from os.path import normpath, realpath, basename, dirname
 from sys import argv, exit
 from subprocess import *
-from threading import Lock
 
 import os
 import re
@@ -18,7 +17,6 @@ import pysvn
 class SvnPropFS(LoggingMixIn, Operations):
     def __init__(self, root):
         self.root = realpath(root)
-        self.rwlock = Lock()
         self.client = pysvn.Client()
         try:
             info = self.client.info(self.root)
@@ -86,9 +84,8 @@ class SvnPropFS(LoggingMixIn, Operations):
     open = os.open
         
     def read(self, path, size, offset, fh):
-        with self.rwlock:
-            os.lseek(fh, offset, 0)
-            return os.read(fh, size)
+        os.lseek(fh, offset, 0)
+        return os.read(fh, size)
 
     def readdir(self, path, fh):
         origpath = path[len(self.root):]
@@ -145,9 +142,8 @@ class SvnPropFS(LoggingMixIn, Operations):
     utimens = os.utime
     
     def write(self, path, data, offset, fh):
-        with self.rwlock:
-            os.lseek(fh, offset, 0)
-            return os.write(fh, data)
+        os.lseek(fh, offset, 0)
+        return os.write(fh, data)
     
 
 if __name__ == "__main__":
