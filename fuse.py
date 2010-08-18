@@ -22,6 +22,7 @@ from platform import machine, system
 from stat import S_IFDIR
 from traceback import print_exc
 import os
+import time
 
 class c_timespec(Structure):
     _fields_ = [('tv_sec', c_long), ('tv_nsec', c_long)]
@@ -637,7 +638,7 @@ class LoggingMixIn:
         comm = os.path.basename(os.readlink('/proc/%d/exe' % pid))
         #except:
         #    comm = '?'
-        print comm, '->', op, path, repr(args)
+        print time.time(), comm, '->', op, path, repr(args)
         ret = '[Unknown Error]'
         try:
             ret = getattr(self, op)(path, *args)
@@ -646,4 +647,4 @@ class LoggingMixIn:
             ret = str(e)
             raise
         finally:
-            print comm, '<-', op, repr(ret)
+            print time.time(), comm, '<-', op, repr(ret)
