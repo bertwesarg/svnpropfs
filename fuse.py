@@ -633,11 +633,11 @@ class Operations(object):
 
 class LoggingMixIn:
     def __call__(self, op, path, *args):
-        #try:
         uid, gid, pid = fuse_get_context()
-        comm = os.path.basename(os.readlink('/proc/%d/exe' % pid))
-        #except:
-        #    comm = '?'
+        try:
+            comm = os.path.basename(os.readlink('/proc/%d/exe' % pid))
+        except:
+            comm = '(' + repr(pid) + ')'
         print time.time(), comm, '->', op, path, repr(args)
         ret = '[Unknown Error]'
         try:
