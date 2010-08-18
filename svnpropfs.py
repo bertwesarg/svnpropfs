@@ -164,7 +164,7 @@ if __name__ == "__main__":
     try:
         os.rename(mountpoint, shadowmountpoint)
         os.mkdir(mountpoint, os.stat(shadowmountpoint).st_mode)
-        fuse = FUSE(SvnPropFS(shadowmountpoint), mountpoint, foreground=True, nothreads=True, fsname=argv[1])
+        fuse = FUSE(SvnPropFS(shadowmountpoint), mountpoint, foreground=True, nothreads=True, fsname='svnpropfs')
     except BaseException, e:
         print repr(e)
     finally:
