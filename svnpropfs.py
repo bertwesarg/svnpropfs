@@ -2,6 +2,8 @@
 
 from __future__ import with_statement
 
+from collections import defaultdict
+
 import os
 from errno import *
 from stat import *
@@ -15,6 +17,10 @@ import pysvn
 
 class SvnPropFS(LoggingMixIn, Operations):
     def __init__(self, root):
+        self.files = {}
+        self.data = defaultdict(str)
+        self.fd = 0
+        self.map_to_os_fd = defaultdict(int)
         self.root = os.path.realpath(root)
         self.client = pysvn.Client()
         try:
@@ -26,11 +32,11 @@ class SvnPropFS(LoggingMixIn, Operations):
 
     def __call__(self, op, path, *args):
         return super(SvnPropFS, self).__call__(op, os.path.normpath(self.root + path), *args)
-    
+
     def access(self, path, mode):
         if not os.access(path, mode):
             raise OSError(EACCES, '')
-    
+
     def chmod(self, path, mode):
         return os.chmod(path, mode)
 
@@ -38,13 +44,21 @@ class SvnPropFS(LoggingMixIn, Operations):
         return os.chown(path, uid, gid)
 
     def create(self, path, mode):
-        return os.open(path, os.O_WRONLY | os.O_CREAT, mode)
+        return open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
 
     def flush(self, path, fh):
-        return os.fsync(fh)
+        if fh in self.map_to_os_fd:
+            os_fd = self.map_to_os_fd[fh]
+            return os.fsync(os_fd)
+        else:
+            raise OSError(os.EINVAL, '')
 
     def fsync(self, path, datasync, fh):
-        return os.fsync(fh)
+        if fh in self.map_to_os_fd:
+            os_fd = self.map_to_os_fd[fh]
+            return os.fsync(os_fd)
+        else:
+            raise OSError(os.EINVAL, '')
 
     def getattr(self, path, fh=None):
         dirpath = os.path.dirname(path)
@@ -73,27 +87,63 @@ class SvnPropFS(LoggingMixIn, Operations):
             print prop
             if len(prop) == 0:
                 raise OSError(ENOENT, '')
+            uid, gid, pid = fuse_get_context()
             return dict(
                 st_mode=(S_IFREG | 0644),
                 st_nlink=1,
                 st_size=len(prop[srcname]),
                 st_ctime=time.time(),
                 st_mtime=time.time(),
-                st_atime=time.time())
+                st_atime=time.time(),
+                st_uid=uid,
+                st_gid=gid)
 
     getxattr = None
 
     def link(self, target, source):
         return os.link(source, target)
-    
+
     listxattr = None
     mkdir = os.mkdir
     mknod = os.mknod
-    open = os.open
-        
+
+    def open(self, path, flags, *args):
+        dirpath = os.path.dirname(path)
+        name = os.path.basename(path)
+        m = self.propregex.match(name)
+        if m == None:
+            self.fd += 1
+            self.map_to_os_fd[self.fd] = os.open(path, flags, *args)
+            return self.fd
+        else:
+            openmode = flags & (os.O_RDONLY | os.O_WRONLY | os.O_RDWR)
+            if openmode == os.O_WRONLY or openmode == os.O_RDWR:
+                raise OSError(EACCES, '')
+
+            if len(m.group('name')) == 0:
+                srcname = dirpath
+            else:
+                srcname = os.path.join(dirpath, m.group('name'))
+            prop = dict()
+            try:
+                prop = self.client.propget(m.group('prop'), srcname, recurse=False)
+            except:
+                raise OSError(ENOENT, '')
+            print prop
+            if len(prop) == 0:
+                raise OSError(ENOENT, '')
+
+            self.data[path[len(self.root):]] = prop[srcname]
+            self.fd += 1
+            return self.fd
+
     def read(self, path, size, offset, fh):
-        os.lseek(fh, offset, 0)
-        return os.read(fh, size)
+        if fh in self.map_to_os_fd:
+            os_fd = self.map_to_os_fd[fh]
+            os.lseek(os_fd, offset, 0)
+            return os.read(os_fd, size)
+        else:
+            raise OSError(os.EINVAL, '')
 
     def readdir(self, path, fh):
         origpath = path[len(self.root):]
@@ -124,35 +174,43 @@ class SvnPropFS(LoggingMixIn, Operations):
         return out
 
     readlink = os.readlink
-    
+
     def release(self, path, fh):
-        return os.close(fh)
-        
+        if fh in self.map_to_os_fd:
+            os_fd = self.map_to_os_fd[fh]
+            del self.map_to_os_fd[fh]
+            return os.close(os_fd)
+        else:
+            raise OSError(os.EINVAL, '')
+
     def rename(self, old, new):
         return os.rename(old, self.root + new)
-    
+
     rmdir = os.rmdir
-    
+
     def statfs(self, path):
         stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
-    
+
     def symlink(self, target, source):
         return os.symlink(source, target)
-    
+
     def truncate(self, path, length, fh=None):
-        with open(path, 'r+') as f:
+        with os.open(path, 'r+') as f:
             f.truncate(length)
-    
+
     unlink = os.unlink
     utimens = os.utime
-    
+
     def write(self, path, data, offset, fh):
-        os.lseek(fh, offset, 0)
-        return os.write(fh, data)
-    
+        if fh in self.map_to_os_fd:
+            os_fd = self.map_to_os_fd[fh]
+            os.lseek(os_fd, offset, 0)
+            return os.write(os_fd, data)
+        else:
+            raise OSError(os.EINVAL, '')
 
 if __name__ == "__main__":
     if len(argv) != 2:
