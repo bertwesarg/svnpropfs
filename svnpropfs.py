@@ -51,14 +51,14 @@ class SvnPropFS(LoggingMixIn, Operations):
             os_fd = self.map_to_os_fd[fh]
             return os.fsync(os_fd)
         else:
-            raise OSError(os.EINVAL, '')
+            raise OSError(EINVAL, '')
 
     def fsync(self, path, datasync, fh):
         if fh in self.map_to_os_fd:
             os_fd = self.map_to_os_fd[fh]
             return os.fsync(os_fd)
         else:
-            raise OSError(os.EINVAL, '')
+            raise OSError(EINVAL, '')
 
     def getattr(self, path, fh=None):
         dirpath = os.path.dirname(path)
@@ -181,7 +181,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             del self.map_to_os_fd[fh]
             return os.close(os_fd)
         else:
-            raise OSError(os.EINVAL, '')
+            raise OSError(EINVAL, '')
 
     def rename(self, old, new):
         return os.rename(old, self.root + new)
@@ -210,7 +210,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             os.lseek(os_fd, offset, 0)
             return os.write(os_fd, data)
         else:
-            raise OSError(os.EINVAL, '')
+            raise OSError(EINVAL, '')
 
 if __name__ == "__main__":
     if len(argv) != 2:
