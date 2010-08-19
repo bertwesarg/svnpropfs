@@ -28,7 +28,7 @@ class SvnPropFS(LoggingMixIn, Operations):
         except:
             print 'source is not an subversion working directory'
             exit(1)
-        self.propregex = re.compile(r"^\.(?P<name>[^#]*)#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
+        self.propregex = re.compile(r"^\.(?:#(?P<name>.+))?#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
 
     def __call__(self, op, path, *args):
         return super(SvnPropFS, self).__call__(op, os.path.normpath(self.root + path), *args)
@@ -75,7 +75,7 @@ class SvnPropFS(LoggingMixIn, Operations):
                 'st_size',
                 'st_uid'))
         else:
-            if len(m.group('name')) == 0:
+            if m.group('name') == None:
                 srcname = dirpath
             else:
                 srcname = os.path.join(dirpath, m.group('name'))
@@ -120,7 +120,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             if openmode == os.O_WRONLY or openmode == os.O_RDWR:
                 raise OSError(EACCES, '')
 
-            if len(m.group('name')) == 0:
+            if m.group('name') == None:
                 srcname = dirpath
             else:
                 srcname = os.path.join(dirpath, m.group('name'))
@@ -168,7 +168,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             if  name == path:
                 name = ''
             else:
-                name = os.path.basename(name)
+                name = '#' + os.path.basename(name)
             for prop in prop_dict.keys():
                 out += ['.' + name + '#' + prop]
         return out
