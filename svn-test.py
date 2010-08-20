@@ -8,10 +8,10 @@ from os.path import realpath, basename, normpath
 
 client = pysvn.Client()
 
-props = client.propget(sys.argv[1], sys.argv[2], recurse=False)
-print props
-for prop in props:
-    sys.stdout.write(props[prop])
+#props = client.propget(sys.argv[1], sys.argv[2], recurse=False)
+#print props
+#for prop in props:
+#    sys.stdout.write(props[prop])
 
 #entries = client.proplist(sys.argv[1], depth=pysvn.depth.files)
 #for entry in entries:
@@ -42,8 +42,8 @@ for prop in props:
 #        print '.#' + name + prop
 #
 
-#rx = re.compile(r"^\.(?P<name>[^#]*)#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
-#m = rx.match(sys.argv[1])
-#if m != None:
-#    print m.group('name')
-#    print m.group('prop')
+rx = re.compile(r"^\.(?:#(?P<name>.+))?#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
+m = rx.match(sys.argv[1])
+if m != None:
+    print m.group('name')
+    print m.group('prop')
