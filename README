@@ -1,0 +1,15 @@
+This file system exports subversion properties in a work-tree as virtual files.
+Properties on files will be named as '.#<filename>#<propname>' and on
+directories as '.#<propname>' as file inside the directory. It also hides the
+'.svn' directory in directory listings. These virtual files are hidden for
+common svn commands like svn, svnadmin, svnlook, and kdesvn.
+
+Usage:
+    svnpropfs <svn-work-tree>
+
+Dependencies:
+ * Python (its currently hardcoded to python2.6 in the hash-bang)
+ * pysvn (http://pysvn.tigris.org)
+   Install with 'apt-get install python-svn' on debian based systems.
+ * The python interface to FUSE is included and comes
+   from http://code.google.com/p/fusepy/
