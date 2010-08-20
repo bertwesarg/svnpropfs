@@ -45,7 +45,15 @@ class SvnPropFS(LoggingMixIn, Operations):
         return os.chown(path, uid, gid)
 
     def create(self, path, mode):
-        return open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+        dirpath = os.path.dirname(path)
+        name = os.path.basename(path)
+        m = self.propregex.match(name)
+        if m == None:
+            self.fd += 1
+            self.map_to_os_fd[self.fd] = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode)
+            return self.fd
+        else:
+            raise OSError(ENOENT, '')
 
     def flush(self, path, fh):
         if fh in self.map_to_os_fd:
