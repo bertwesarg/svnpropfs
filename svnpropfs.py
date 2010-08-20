@@ -149,7 +149,6 @@ class SvnPropFS(LoggingMixIn, Operations):
                 prop = self.client.propget(m.group('prop'), srcname, recurse=False)
             except:
                 raise OSError(ENOENT, '')
-            print prop
             if len(prop) == 0:
                 raise OSError(ENOENT, '')
 
