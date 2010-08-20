@@ -19,6 +19,7 @@ class SvnPropFS(LoggingMixIn, Operations):
     def __init__(self, root):
         self.files = {}
         self.data = defaultdict(str)
+        self.refcount = {}
         self.fd = 0
         self.map_to_os_fd = defaultdict(int)
         self.root = os.path.realpath(root)
@@ -51,14 +52,26 @@ class SvnPropFS(LoggingMixIn, Operations):
             os_fd = self.map_to_os_fd[fh]
             return os.fsync(os_fd)
         else:
-            raise OSError(EINVAL, '')
+            dirpath = os.path.dirname(path)
+            name = os.path.basename(path)
+            m = self.propregex.match(name)
+            if m == None:
+                raise OSError(EINVAL, '')
+
+            return 0
 
     def fsync(self, path, datasync, fh):
         if fh in self.map_to_os_fd:
             os_fd = self.map_to_os_fd[fh]
             return os.fsync(os_fd)
         else:
-            raise OSError(EINVAL, '')
+            dirpath = os.path.dirname(path)
+            name = os.path.basename(path)
+            m = self.propregex.match(name)
+            if m == None:
+                raise OSError(EINVAL, '')
+
+            return 0
 
     def getattr(self, path, fh=None):
         dirpath = os.path.dirname(path)
@@ -132,7 +145,13 @@ class SvnPropFS(LoggingMixIn, Operations):
             if len(prop) == 0:
                 raise OSError(ENOENT, '')
 
-            self.data[path[len(self.root):]] = prop[srcname]
+            entry = path[len(self.root):]
+            if entry not in self.refcount:
+                self.refcount[entry] = 0
+            if self.refcount[entry] == 0:
+                self.data[entry] = prop[srcname]
+            self.refcount[entry] += 1
+
             self.fd += 1
             return self.fd
 
@@ -142,7 +161,13 @@ class SvnPropFS(LoggingMixIn, Operations):
             os.lseek(os_fd, offset, 0)
             return os.read(os_fd, size)
         else:
-            raise OSError(os.EINVAL, '')
+            dirpath = os.path.dirname(path)
+            name = os.path.basename(path)
+            m = self.propregex.match(name)
+            if m == None:
+                raise OSError(EINVAL, '')
+
+            return self.data[path[len(self.root):]][offset:offset + size]
 
     def readdir(self, path, fh):
         origpath = path[len(self.root):]
@@ -180,7 +205,20 @@ class SvnPropFS(LoggingMixIn, Operations):
             del self.map_to_os_fd[fh]
             return os.close(os_fd)
         else:
-            raise OSError(EINVAL, '')
+            dirpath = os.path.dirname(path)
+            name = os.path.basename(path)
+            m = self.propregex.match(name)
+            if m == None:
+                raise OSError(EINVAL, '')
+
+            entry = path[len(self.root):]
+            if entry not in self.refcount:
+                raise OSError(EINVAL, '')
+            self.refcount[entry] -= 1
+            if self.refcount[entry] == 0:
+                del self.data[entry]
+
+            return 0
 
     def rename(self, old, new):
         return os.rename(old, self.root + new)
