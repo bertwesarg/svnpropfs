@@ -11,6 +11,10 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# Changes by Bert Wesarg <Bert.Wesarg@googlemail.com>:
+#  * Added timestamp and name of requesting process to LoggingMixIn output
+
 
 from __future__ import division
 
