@@ -101,7 +101,7 @@ class SvnPropFS(LoggingMixIn, Operations):
                 raise OSError(ENOENT, '')
             uid, gid, pid = fuse_get_context()
             return dict(
-                st_mode=(S_IFREG | 0644),
+                st_mode=(S_IFREG | 0444),
                 st_nlink=1,
                 st_size=len(prop[srcname]),
                 st_ctime=time.time(),
