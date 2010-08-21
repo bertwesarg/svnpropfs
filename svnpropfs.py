@@ -195,13 +195,17 @@ class SvnPropFS(LoggingMixIn, Operations):
         if comm in ['svn', 'svnversion', 'svnadmin', 'svnlook', 'kdesvn']:
             return out
 
-        for name, prop_dict in self.client.proplist(path, depth=pysvn.depth.files):
-            if  name == path:
-                name = ''
-            else:
-                name = '#' + os.path.basename(name)
-            for prop in prop_dict.keys():
-                out += ['.' + name + '#' + prop]
+        try:
+            for name, prop_dict in self.client.proplist(path, depth=pysvn.depth.files):
+                if  name == path:
+                    name = ''
+                else:
+                    name = '#' + os.path.basename(name)
+                for prop in prop_dict.keys():
+                    out += ['.' + name + '#' + prop]
+        except:
+            pass
+
         return out
 
     readlink = os.readlink
