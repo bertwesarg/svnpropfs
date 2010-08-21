@@ -178,7 +178,6 @@ class SvnPropFS(LoggingMixIn, Operations):
             return self.data[path[len(self.root):]][offset:offset + size]
 
     def readdir(self, path, fh):
-        origpath = path[len(self.root):]
         ls = os.listdir(path)
         if '.svn' in ls:
             ls.remove('.svn')
