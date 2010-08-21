@@ -30,6 +30,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             print 'source is not an subversion working directory'
             exit(1)
         self.propregex = re.compile(r"^\.(?:#(?P<name>.+))?#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
+        self.comm_ignore = ['svn', 'svnversion', 'svnadmin', 'svnlook', 'kdesvn']
 
     def __call__(self, op, path, *args):
         return super(SvnPropFS, self).__call__(op, os.path.normpath(self.root + path), *args)
@@ -192,7 +193,7 @@ class SvnPropFS(LoggingMixIn, Operations):
 
         # for anything that starts with svn we pretend that there are no
         # property files
-        if comm in ['svn', 'svnversion', 'svnadmin', 'svnlook', 'kdesvn']:
+        if comm in self.comm_ignore:
             return out
 
         try:
