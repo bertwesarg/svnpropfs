@@ -31,6 +31,7 @@ class SvnPropFS(LoggingMixIn, Operations):
             exit(1)
         self.propregex = re.compile(r"^\.(?:#(?P<name>.+))?#(?P<prop>[a-zA-Z_:][a-zA-Z0-9_:.-]*)$")
         self.comm_ignore = ['svn', 'svnversion', 'svnadmin', 'svnlook', 'kdesvn']
+        self.ignore_entries = ['.svn', '.git', '.hg', 'CVS']
 
     def __call__(self, op, path, *args):
         return super(SvnPropFS, self).__call__(op, os.path.normpath(self.root + path), *args)
@@ -179,8 +180,8 @@ class SvnPropFS(LoggingMixIn, Operations):
 
     def readdir(self, path, fh):
         ls = os.listdir(path)
-        if '.svn' in ls:
-            ls.remove('.svn')
+        for entry in self.ignore_entries:
+            if entry in ls: ls.remove(entry)
 
         out = ['.', '..'] + ls
 
